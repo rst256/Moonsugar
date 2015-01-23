@@ -807,6 +807,25 @@ static int explist (LexState *ls, expdesc *v) {
   return n;
 }
 
+static void property_getval (LexState *ls, expdesc *f, int line) {
+  FuncState *fs = ls->fs;
+  expdesc args;
+  int base, nparams;
+  args.k = VVOID;
+  lua_assert(f->k == VNONRELOC);
+  base = f->u.info;  /* base register for call */
+  if (hasmultret(args.k))
+    nparams = LUA_MULTRET;  /* open call */
+  else {
+    if (args.k != VVOID)
+      luaK_exp2nextreg(fs, &args);  /* close last argument */
+    nparams = fs->freereg - (base+1);
+  }
+  init_exp(f, VCALL, luaK_codeABC(fs, OP_CALL, base, nparams+1, 2));
+  luaK_fixline(fs, line);
+  fs->freereg = base+1;  /* call remove function and arguments and leaves
+                            (unless changed) one result */
+}
 
 static void funcargs (LexState *ls, expdesc *f, int line) {
   FuncState *fs = ls->fs;
